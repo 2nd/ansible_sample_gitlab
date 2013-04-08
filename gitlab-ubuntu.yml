@@ -20,6 +20,8 @@
 - hosts: gitlab.local
   sudo: True
   vars:
+    mysql_root_password: ChangeMe
+    mysql_gitlab_password: ChangeMeAsWell
     ruby_version: 1.9.3-p327
     gitlab_tag: 4-2-stable
     gitlab_recipe_tag: 4-2-stable
