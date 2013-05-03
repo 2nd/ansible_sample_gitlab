@@ -1,8 +1,11 @@
 ---
 - hosts: all
   sudo: yes
-  sudo_user: gitlab
+  sudo_user: git
   tasks:
+    - name: "Install dependencies"
+      action: shell bundle install --deployment --without development test RAILS_ENV=production chdir=/home/git/gitlab
+
     - name: "Command to populate database"
-      action: shell yes 'yes' | bundle exec rake gitlab:setup RAILS_ENV=production chdir=/home/gitlab/gitlab
+      action: shell yes 'yes' | bundle exec rake gitlab:setup RAILS_ENV=production chdir=/home/git/gitlab
       ignore_errors: yes

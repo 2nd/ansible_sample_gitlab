@@ -1,10 +1,22 @@
 production:
-  adapter: mysql2
-  encoding: utf8
-  reconnect: false
-  database: gitlabhq_production
+  adapter: postgresql
+  encoding: unicode
+  database: {{ postgres_db_name }}
   pool: 5
-  username: gitlab
-  password: {{ mysql_gitlab_password }}
+  username: {{ postgres_db_user }}
+  password: {{ postgres_db_password }}
   host: localhost
+  port: 5432
+  socket: /tmp/postgresql.sock
+
+#production:
+  #adapter: mysql2
+  #encoding: utf8
+  #reconnect: false
+  #database: gitlabhq_production
+  #pool: 5
+  #username: root
+  #password: {{ mysql_gitlab_password }}
+  # host: localhost
   # socket: /tmp/mysql.sock
+

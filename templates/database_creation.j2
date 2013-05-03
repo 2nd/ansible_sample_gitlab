@@ -1,0 +1,3 @@
+create database {{ postgres_db_name }};
+create user {{ postgres_db_user }} password '{{ postgres_db_password }}';
+grant all on database {{ postgres_db_name }} to {{ postgres_db_user }};

@@ -1,0 +1,4 @@
+---
+# Standard set of handlers for pg
+- name: restart postgresql
+  action: service name=postgresql state=restarted enabled=yes

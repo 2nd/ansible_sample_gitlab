@@ -3,13 +3,13 @@
 # App Version: 4.0
 
 upstream gitlab {
-  server unix:/home/gitlab/gitlab/tmp/sockets/gitlab.socket;
+  server unix:/home/git/gitlab/tmp/sockets/gitlab.socket;
 }
 
 server {
   listen {{ ansible_default_ipv4.address }}:{{ nginx_port }} default_server;         # e.g., listen 192.168.1.1:80;
   server_name {{ inventory_hostname }};     # e.g., server_name source.example.com;
-  root /home/gitlab/gitlab/public;
+  root /home/git/gitlab/public;
 
   # individual nginx logs for this gitlab vhost
   access_log  /var/log/nginx/gitlab_access.log;

@@ -1,0 +1,123 @@
+---
+- hosts: all
+  sudo: True
+  vars:
+    ruby_version: 1.9.3-p327
+    postgres_db_name: redmine_production
+    postgres_db_user: redmine
+    postgres_db_password: changeme
+    database_user_create_sql: /tmp/create_redmine_database.sql
+    puma_redmine_port: 8000
+
+  handlers:
+    - include: handlers/standard_handlers.yml
+    - include: handlers/postgresql_handlers.yml
+
+  tasks:
+      - include: tasks/standard_server.yml
+      - include: tasks/install_postgresql.yml
+
+      - name: Add required packages for redmine
+        action: apt pkg=build-essential state=latest update_cache=yes
+
+      - name: Add required packages for redmine
+        action: apt pkg=$item state=latest
+        with_items:
+          - zlib1g-dev
+          - libyaml-dev
+          - libssl-dev
+          - libmagickwand-dev
+          - libgdbm-dev
+          - libreadline-dev
+          - libncurses5-dev
+          - libffi-dev
+          - curl
+          - git-core
+          - openssh-server
+          - redis-server
+          - checkinstall
+          - libxml2-dev
+          - libxslt1-dev
+          - libcurl4-openssl-dev
+          - libicu-dev
+        tags:
+          - buildsetup
+
+        # The script here checks if ruby is installed, is the right version, and
+        # if not grabs and builds it.  Unfortunately at present this always shows
+        # as changed even if no changes were made (can be fixed by upcoming ansible)
+      - name: Build Ruby
+        action: script scripts/install_ruby.sh $ruby_version
+        tags:
+          - rubybuild
+
+      - name: Clone redmine
+        action: git repo=git://github.com/redmine/redmine.git dest=/srv/redmine version=2.3-stable
+        tags:
+          - redmine
+
+      - name: Fix redmine repo permissions
+        action: file path=/srv/redmine/ state=directory recurse=yes owner=git group=git
+        tags:
+          - redmine
+
+      - name: Fix gitolite repo permissions - because above command has issues
+        action: command chown -R git.git /srv/redmine
+        tags:
+          - redmine
+
+      - name: Configure puma
+        action: template dest=/srv/redmine/config/puma.rb src=templates/redmine/puma.j2 mode=0444 owner=git group=git
+        tags:
+          - redmineconf
+
+      - name: Configure database
+        action: template dest=/srv/redmine/config/database.yml src=templates/redmine/database.yml.j2 mode=0444 owner=git group=git
+        tags:
+          - redmineconf
+
+      - name: Copy configuration file
+        action: template dest=/srv/redmine/config/configuration.yml src=templates/redmine/configuration.yml.j2 mode=0444 owner=git group=git
+        tags:
+          - redmineconf
+
+      - name: Copy gemfile file
+        action: template dest=/srv/redmine/Gemfile.local src=templates/redmine/Gemfile.local mode=0444 owner=git group=git
+        tags:
+          - redmineconf
+
+      - name: Install gem rake
+        action: gem name=rake state=latest
+        tags:
+          - redmineconf
+
+      - name: Create temporary and assets dirs
+        action: command mkdir tmp tmp/pdf public/plugin_assets chdir=/srv/redmine/
+        ignore_errors: yes
+        tags:
+          - redmineconf
+
+      - name: Change permissions
+        action: command chown -R git:git files log tmp public/plugin_assets chdir=/srv/redmine/
+        ignore_errors: yes
+        tags:
+          - redmineconf
+
+      - name: Chmod
+        action: command chmod -R 755 files log tmp public/plugin_assets chdir=/srv/redmine/
+        ignore_errors: yes
+        tags:
+          - redmineconf
+
+      - name: Copy init file
+        action: template dest=/etc/init.d/redmine src=templates/redmine/redmine.j2 mode=0755
+        tags:
+          - redmineconf
+
+      - name: "Install dependencies"
+        action: shell bundle install --without development test RAILS_ENV=production chdir=/srv/redmine/
+
+
+- include: populate_database_redmine.yml
+#end
+

@@ -20,18 +20,26 @@
 - hosts: gitlab.local
   sudo: True
   vars:
-    mysql_root_password: ChangeMe
-    mysql_gitlab_password: ChangeMeAsWell
     ruby_version: 1.9.3-p327
-    gitlab_tag: 4-2-stable
-    gitlab_recipe_tag: 4-2-stable
+    gitlab_tag: 5-1-stable
+    gitlab_recipe_tag: 5-1-stable
+    postgres_db_name: gitlabhq_production
+    postgres_db_user: gitlab
+    postgres_db_password: changeme
+    database_user_create_sql: /tmp/create_gitlab_database.sql
+
+
+
 
   handlers:
     - include: handlers/standard_handlers.yml
+    # - include: handlers/mysql_handlers.yml
+    - include: handlers/postgresql_handlers.yml
 
   tasks:
     - include: tasks/standard_server.yml
-    - include: tasks/install_mysqld.yml
+    # - include: tasks/install_mysqld.yml
+    - include: tasks/install_postgresql.yml
     - include: tasks/config_exim_smarthost.yml
 
     - name: Add required packages for gitlab
@@ -72,6 +80,7 @@
         name=git
         comment='Git Version Control'
         createhome=yes
+        generate_ssh_key=yes
         home=/home/git
         shell=/bin/sh
         state=present
@@ -79,21 +88,21 @@
       tags:
         - gituser
 
-    - name: Add GitLab user
-      action: >
-        user
-        name=gitlab
-        comment='GitLab User'
-        createhome=yes
-        generate_ssh_key=yes
-        groups=git
-        home=/home/gitlab
-        password='$6$CIGooeH1$Gn6LZE.ayo94tXHPFx0CML.csFfSkUTcXToHMnzD44.CHIow5p3ojPdmzKBe/KxYQVewFyo1CiBJmDl5ko49W0'
-        shell=/bin/sh
-        state=present
-        system=no
-      tags:
-        - gituser
+    # - name: Add GitLab user
+    #   action: >
+    #     user
+    #     name=gitlab
+    #     comment='GitLab User'
+    #     createhome=yes
+    #     generate_ssh_key=yes
+    #     groups=git
+    #     home=/home/gitlab
+    #     password='$6$CIGooeH1$Gn6LZE.ayo94tXHPFx0CML.csFfSkUTcXToHMnzD44.CHIow5p3ojPdmzKBe/KxYQVewFyo1CiBJmDl5ko49W0'
+    #     shell=/bin/sh
+    #     state=present
+    #     system=no
+    #   tags:
+    #     - gituser
 
     - name: Checkout gitolite repository
       action: git repo=https://github.com/gitlabhq/gitolite.git dest=/home/git/gitolite version=gl-v320
@@ -126,7 +135,7 @@
         - gitolite
 
     - name: Copy gitlab key into place
-      action: command install -o git -m0444 /home/gitlab/.ssh/id_rsa.pub /home/git/gitlab.pub
+      action: command install -o git -m0444 /home/git/.ssh/id_rsa.pub /home/git/gitlab.pub
       tags:
         - gitolite
 
@@ -161,48 +170,50 @@
       tags:
         - gitolite
 
-    - name: Ensure gitlabhq_production database on mysqld
-      action: mysql_db login_user=root login_password=$mysql_root_password name=gitlabhq_production state=present encoding=utf8 collation=utf8_unicode_ci
-      tags:
-        - database
 
-    - name: Ensure gitlab user on mysqld
-      action: mysql_user login_user=root login_password=$mysql_root_password name=gitlab password=$mysql_gitlab_password state=present priv=gitlabhq_production.*:SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER
-      tags:
-        - database
 
     - name: Checkout gitlab repository
-      action: git repo=https://github.com/gitlabhq/gitlabhq.git dest=/home/gitlab/gitlab version=$gitlab_tag force=no
+      action: git repo=https://github.com/gitlabhq/gitlabhq.git dest=/home/git/gitlab version=$gitlab_tag force=no
       tags:
         - gitlabbuild
 
     - name: Checkout gitlab recipes repository
-      action: git repo=https://github.com/gitlabhq/gitlab-recipes.git dest=/home/gitlab/gitlab-recipes version=$gitlab_recipe_tag force=no
+      action: git repo=https://github.com/gitlabhq/gitlab-recipes.git dest=/home/git/gitlab-recipes version=$gitlab_recipe_tag force=no
+      tags:
+        - gitlabbuild
+
+    - name: Add www-data user to group git
+      action: user name=www-data append=yes groups=git
       tags:
         - gitlabbuild
 
     - name: Setup gitlab account
-      action: script scripts/setup_gitlab.sh
+      action: script scripts/setup_gitlab5.sh
       tags:
-        - gitlabbuild
+        - gitlabsetup
 
     - name: Configure gitlab
-      action: template dest=/home/gitlab/gitlab/config/gitlab.yml src=templates/gitlab/gitlab.yml.j2 mode=0444 owner=gitlab group=gitlab
+      action: template dest=/home/git/gitlab/config/gitlab.yml src=templates/gitlab/gitlab.yml.j2 mode=0444 owner=git group=git
       tags:
         - gitlabconf
 
-    - name: Configure unicorn
-      action: template dest=/home/gitlab/gitlab/config/unicorn.rb src=templates/gitlab/unicorn.rb.j2 mode=0444 owner=gitlab group=gitlab
+    # - name: Configure unicorn
+    #   action: template dest=/home/git/gitlab/config/unicorn.rb src=templates/gitlab/unicorn.rb.j2 mode=0444 owner=gitlab group=gitlab
+    #   tags:
+    #     - gitlabconf
+
+    - name: Configure puma
+      action: template dest=/home/git/gitlab/config/puma.rb src=templates/gitlab/puma.j2 mode=0444 owner=git group=git
       tags:
         - gitlabconf
 
     - name: Configure database
-      action: template dest=/home/gitlab/gitlab/config/database.yml src=templates/gitlab/database.yml.j2 mode=0444 owner=gitlab group=gitlab
+      action: template dest=/home/git/gitlab/config/database.yml src=templates/gitlab/database.yml.j2 mode=0444 owner=git group=git
       tags:
         - gitlabconf
 
     - name: Install charlock homes gem
-      action: command chdir=/home/gitlab/gitlab /usr/local/bin/gem install charlock_holmes --version '0.6.9'
+      action: command chdir=/home/git/gitlab /usr/local/bin/gem install charlock_holmes --version '0.6.9'
       tags:
         - gitlabconf
 
@@ -211,10 +222,7 @@
       tags:
         - gitlabconf
 
-    - name: Enable gitlab on startup
-      action: service name=gitlab enabled=yes state=restarted
-      tags:
-        - gitlabconf
+
 
     - name: Add packages for nginx
       action: apt pkg=$item state=latest
@@ -239,19 +247,24 @@
         - nginx
 
     - name: Ensure gitlab bin directory
-      action: file path=/home/gitlab/bin state=directory owner=gitlab group=gitlab mode=0755
+      action: file path=/home/git/bin state=directory owner=git group=git mode=0755
       tags:
         - backup
 
     - name: Create backup script
-      action: template dest=/home/gitlab/bin/gitlab_backup.sh src=templates/gitlab/gitlab_backup.j2 mode=0755 owner=root group=root
+      action: template dest=/home/git/bin/gitlab_backup.sh src=templates/gitlab/gitlab_backup.j2 mode=0755 owner=root group=root
       tags:
         - backup
 
     - name: Ensure daily gitlab backup
-      action: cron name="gitlab backup" user=gitlab hour=18 minute=8 job=/home/gitlab/bin/gitlab_backup.sh
+      action: cron name="gitlab backup" user=git hour=18 minute=8 job=/home/git/bin/gitlab_backup.sh
       tags:
         - backup
+
+    - name: Enable gitlab on startup
+      action: service name=gitlab enabled=yes state=restarted
+      tags:
+        - gitlabconf
 
     ## the version of this I use has additional config here that sets up
     ## a mechanism to get the gitlab backup off the machine.  Its a bit

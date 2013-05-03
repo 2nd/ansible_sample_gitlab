@@ -1,0 +1,46 @@
+---
+# This is an included task file to install and secure mysql server
+#
+
+- name: ensure a database root password for this - fail if not
+  action: fail No database root password defined
+  when_unset: $postgres_db_password
+
+- name: install database
+  action: apt pkg=postgresql-9.1 state=installed
+
+- name: install python-psycopg2
+  action: apt pkg=python-psycopg2 state=installed
+
+- name: install libpq-dev
+  action: apt pkg=libpq-dev state=installed
+
+# - name: install pg gem
+  # gem: name=postgres-pr state=present
+
+# - name: install pg gem
+#   gem: name=activerecord-postgresql-adapter state=present
+#   sudo: yes
+#   sudo_user: git
+
+- name: Deploy database file
+  action: template src=templates/database_creation.j2 dest=$database_user_create_sql mode=0666 owner=postgres group=postgres
+
+- name: Run database file
+  action: command psql -f $database_user_create_sql
+  sudo: yes
+  sudo_user: postgres
+
+- name: Restarting Postgres
+  action: command service postgresql restart
+
+- name: Adding database user
+  action: postgresql_user user=${postgres_db_user} password=${postgres_db_password} role_attr_flags=LOGIN,CREATEDB,REPLICATION state=present
+  sudo: yes
+  sudo_user: postgres
+
+- name: Creating project's database
+  action: postgresql_db db=${postgres_db_name} owner=${postgres_db_user} state=present
+  sudo: yes
+  sudo_user: postgres
+# end

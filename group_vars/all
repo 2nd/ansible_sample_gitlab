@@ -1,5 +1,6 @@
 nginx_port: 8080
 unicorn_port: 8888
+puma_redmine_port: 8000
 
 mail_server:
     host:       10.0.0.4

@@ -2,7 +2,7 @@
 # note that config/gitlab.yml web path should also be changed
 # ENV['RAILS_RELATIVE_URL_ROOT'] = "/gitlab"
 
-app_dir = '/home/gitlab/gitlab'
+app_dir = '/home/git/gitlab'
 worker_processes 2
 working_directory app_dir
 
@@ -15,7 +15,7 @@ timeout 60
 
 # listen on a Unix domain socket and/or a TCP port,
 
-listen {{ gunicorn_port }} # listen to port 8080 on all TCP interfaces
+listen {{ unicorn_port }} # listen to port 8080 on all TCP interfaces
 #listen "127.0.0.1:8080"  # listen to port 8080 on the loopback interface
 listen "#{app_dir}/tmp/sockets/gitlab.socket"
 #listen "127.0.0.1:3000"  # listen to port 3000 on the loopback interface

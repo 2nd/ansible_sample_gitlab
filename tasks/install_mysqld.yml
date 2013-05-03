@@ -48,4 +48,14 @@
   action: script scripts/secure_mysqld.sh $mysql_root_password
   when_changed: $mysql_server_installed
 
+- name: Ensure gitlabhq_production database on mysqld
+  action: mysql_db login_user=root login_password=$mysql_root_password name=gitlabhq_production state=present encoding=utf8 collation=utf8_unicode_ci
+  tags:
+    - database
+
+- name: Ensure gitlab user on mysqld
+  action: mysql_user login_user=root login_password=$mysql_root_password name=gitlab password=$mysql_gitlab_password state=present priv=gitlabhq_production.*:SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER
+  tags:
+    - database
+
 # end

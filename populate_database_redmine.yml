@@ -1,0 +1,18 @@
+---
+- hosts: all
+  sudo: yes
+  sudo_user: git
+  tasks:
+    - name: "Install dependencies"
+      action: shell bundle install --without development test RAILS_ENV=production chdir=/srv/redmine/
+
+    - name: "Generate secret token"
+      action: shell bundle exec rake generate_secret_token RAILS_ENV=production chdir=/srv/redmine/
+
+    - name: "Command to populate database"
+      action: shell yes 'yes' | bundle exec rake db:migrate RAILS_ENV=production chdir=/srv/redmine/
+      ignore_errors: yes
+
+    # - name: "Command to populate database with default data"
+    #   action: shell yes 'yes' | bundle exec rake redmine:load_default_data RAILS_ENV=production chdir=/srv/redmine/
+    #   ignore_errors: yes

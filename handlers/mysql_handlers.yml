@@ -1,0 +1,7 @@
+---
+# Standard set of handlers for playbooks
+- name: restart mysql
+  action: service name=mysql state=restarted enabled=yes
+
+- name: restart mysqld
+  action: service name=mysqld state=restarted enabled=yes

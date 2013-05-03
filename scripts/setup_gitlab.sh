@@ -11,7 +11,7 @@
 # but it was written as a hack to try this out...
 
 # set ownership of the main gitlab repo
-chown -R gitlab.gitlab /home/gitlab/gitlab
+chown -R git.git /home/git/gitlab
 
 # do a batch of the gitlab setup
 #
@@ -37,28 +37,28 @@ git config --global user.name "GitLab"
 git config --global user.email "gitlab@example.com"
 
 # install a bundle of extra bits...
-cd /home/gitlab/gitlab
+cd /home/git/gitlab
 bundle install --deployment --without development test postgres
 
 # Make directory for satellites
-mkdir -p /home/gitlab/gitlab-satellites
+mkdir -p /home/git/gitlab-satellites
 
 EOT
 
 # set up hooks
-cd /home/gitlab/gitlab
+cd /home/git/gitlab
 cp ./lib/hooks/post-receive /home/git/.gitolite/hooks/common/post-receive
 chown git:git /home/git/.gitolite/hooks/common/post-receive
 
 
 # Make sure GitLab can write to the log/ and tmp/ directories
-sudo chown -R gitlab log/
-sudo chown -R gitlab tmp/
+sudo chown -R git log/
+sudo chown -R git tmp/
 sudo chmod -R u+rwX  log/
 sudo chmod -R u+rwX  tmp/
 
 
 # install init script - might better done direct within ansible
-cd /home/gitlab/gitlab-recipes
+# cd /home/gitl/gitlab-recipes
 ##install init.d/gitlab-centos /etc/init.d/gitlab
-install init.d/gitlab /etc/init.d/gitlab
+# install init.d/gitlab /etc/init.d/gitlab
