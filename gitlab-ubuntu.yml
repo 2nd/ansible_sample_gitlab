@@ -63,12 +63,21 @@
         - libcurl4-openssl-dev
         - libicu-dev
         - libmysqlclient-dev
+        - python-virtualenv
+        - python-dev
+        - python-apt
       tags:
         - buildsetup
 
     # The script here checks if ruby is installed, is the right version, and
     # if not grabs and builds it.  Unfortunately at present this always shows
     # as changed even if no changes were made (can be fixed by upcoming ansible)
+
+    - name: Create necessary symlinks
+      action: file src=/usr/bin/gem path=/usr/local/bin/gem state=link owner=root group=root mode=0644
+      tags:
+        - rubybuild
+
     - name: Build Ruby
       action: script scripts/install_ruby.sh $ruby_version
       tags:
