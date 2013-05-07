@@ -63,9 +63,6 @@
         - libcurl4-openssl-dev
         - libicu-dev
         - libmysqlclient-dev
-        - python-virtualenv
-        - python-dev
-        - python-apt
       tags:
         - buildsetup
 
